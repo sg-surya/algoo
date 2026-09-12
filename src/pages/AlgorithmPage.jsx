@@ -5,7 +5,6 @@ import ArrayBars from "../components/ArrayBars";
 import GraphCanvas from "../components/GraphCanvas";
 import { Play, Pause, SkipForward, RotateCcw, Shuffle, Gauge, Code2, Brain, Clock, Layers, Volume2, VolumeX, Share2, Copy } from "lucide-react";
 import { playForStep, setVolume } from "../utils/sound";
-import PythonRunner from "../components/PythonRunner";
 
 function genArray(n=8, max=30){ return Array.from({length:n},()=> Math.floor(Math.random()* (max-4))+5); }
 function parseCustom(str){
@@ -352,8 +351,6 @@ export default function AlgorithmPage(){
             </div>
           </div>
         </div>
-
-        {!isGraph && <PythonRunner algo={algo} arr={arr} steps={steps} />}
 
         <div className="brutal-card p-4">
           <div className="text-sm font-black mb-2 flex items-center gap-2"><Layers size={14}/> JUMP TO STEP</div>

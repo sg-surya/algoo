@@ -39,7 +39,7 @@ export default function Home(){
       <section className="grid md:grid-cols-2 gap-8 py-8 md:py-12 items-start">
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 text-xs font-black px-3 py-2 rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm">
-            <span className="w-2 h-2 rounded-full bg-brutalLime border border-black animate-pulse" /> 12 ALGORITHMS LIVE • SORTING • SEARCHING
+            <span className="w-2 h-2 rounded-full bg-brutalLime border border-black animate-pulse" /> NEW — 15 ALGORITHMS LIVE • SORTING • SEARCHING • GRAPHS
           </div>
           <h1 className="text-[40px] md:text-[64px] font-black leading-[0.9] tracking-[-0.04em] text-black">
             STOP<br/>
@@ -57,14 +57,12 @@ export default function Home(){
             {[
               {k:"9", l:"Sorting"},
               {k:"3", l:"Searching"},
+              {k:"3", l:"Graphs"},
             ].map(s=>(
               <div key={s.l} className="brutal-card !rounded-xl px-4 py-2.5 flex items-center gap-2 !shadow-brutal-sm">
                 <span className="font-black text-xl leading-none">{s.k}</span><span className="text-xs font-bold text-black/60">{s.l}</span>
               </div>
             ))}
-            <div className="brutal-card !rounded-xl px-4 py-2.5 flex items-center gap-2 !shadow-brutal-sm bg-brutalLime">
-              <span className="font-black text-sm">More algos coming soon → Graphs • DP</span>
-            </div>
           </div>
         </div>
 
@@ -113,7 +111,7 @@ export default function Home(){
       <section className="py-10">
         <div className="flex items-end justify-between mb-6 gap-4">
           <h2 className="text-3xl font-black tracking-tight flex items-center gap-2"><Asterisk className="text-brutalPink fill-brutalPink" /> FEATURED</h2>
-          <Link to="/explorer" className="brutal-btn !py-2 !px-4">View all 12 <ArrowRight size={14} strokeWidth={3}/></Link>
+          <Link to="/explorer" className="brutal-btn !py-2 !px-4">View all 15 <ArrowRight size={14} strokeWidth={3}/></Link>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {featured.map(a=> <AlgorithmCard key={a.id} algo={a} />)}
@@ -124,16 +122,13 @@ export default function Home(){
             {[
               {cat:"Sorting", count:9, desc:"Bubble to Radix — O(n²) se O(n+k) tak", color:"bg-brutalYellow"},
               {cat:"Searching", count:3, desc:"Linear, Binary, Jump — O(n) vs O(log n)", color:"bg-brutalCyan"},
-              {cat:"More", count:"∞", desc:"Graphs • DP • Trees — coming soon 🚧", color:"bg-white"},
+              {cat:"Graphs", count:3, desc:"BFS, DFS, Dijkstra — traversal & paths", color:"bg-brutalPink"},
             ].map(b=>(
-              <div key={b.cat} className={`brutal-card p-5 ${b.color} border-dashed`}>
-                <div className="font-black text-lg">{b.cat.toUpperCase()} {b.count!=="∞" && `(${b.count})`}</div>
+              <Link key={b.cat} to="/explorer" className={`brutal-card p-5 ${b.color} hover:shadow-brutal-lg hover:-translate-y-1 transition`}>
+                <div className="font-black text-lg">{b.cat.toUpperCase()} ({b.count})</div>
                 <div className="text-sm font-bold text-black/70">{b.desc}</div>
-              </div>
+              </Link>
             ))}
-          </div>
-          <div className="mt-4 brutal-card p-4 bg-black text-white text-center font-black">
-            ✨ More algos coming soon — Graphs (BFS/DFS/Dijkstra), Trees, DP • Stay tuned on <a href="https://vasudevai.in" target="_blank" className="underline decoration-brutalYellow">vasudevai.in</a> ✨
           </div>
         </div>
       </section>
