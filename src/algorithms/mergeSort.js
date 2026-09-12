@@ -1,12 +1,13 @@
 export function mergeSortSteps(input){
   const a=[...input];
   const steps=[];
-  const push=(o)=> steps.push({array:[...a], ...o});
-  push({type:"start", indices:[], message:"Divide & Conquer — todke jodenge 🧩", codeLine:0});
+  let comps=0, swaps=0;
+  const push=(o)=> steps.push({array:[...a], variables:{ l:o.variables?.l??"-", m:o.variables?.m??"-", r:o.variables?.r??"-", comps, swaps }, ...o});
+  push({type:"start", indices:[], message:"Divide & Conquer — todke jodenge 🧩", codeLine:0, variables:{l:0,m:"-",r:a.length-1}});
   function mergeSort(l,r){
     if(l>=r) return;
     const m=Math.floor((l+r)/2);
-    push({type:"divide", indices:Array.from({length:r-l+1},(_,k)=>l+k), message:`Divide [${l}..${r}] → [${l}..${m}] & [${m+1}..${r}]`, codeLine:1});
+    push({type:"divide", indices:Array.from({length:r-l+1},(_,k)=>l+k), message:`Divide [${l}..${r}] → [${l}..${m}] & [${m+1}..${r}]`, codeLine:1, variables:{l,m,r}});
     mergeSort(l,m);
     mergeSort(m+1,r);
     merge(l,m,r);
@@ -14,24 +15,25 @@ export function mergeSortSteps(input){
   function merge(l,m,r){
     const left=a.slice(l,m+1), right=a.slice(m+1,r+1);
     let i=0,j=0,k=l;
-    push({type:"merge_start", indices:Array.from({length:r-l+1},(_,idx)=>l+idx), message:`Merging [${left}] & [${right}]`, codeLine:3});
+    push({type:"merge_start", indices:Array.from({length:r-l+1},(_,idx)=>l+idx), message:`Merging [${left}] & [${right}]`, codeLine:3, variables:{l,m,r}});
     while(i<left.length && j<right.length){
-      push({type:"compare", indices:[l+i, m+1+j], message:`Compare ${left[i]} vs ${right[j]}`, codeLine:4});
+      comps++;
+      push({type:"compare", indices:[l+i, m+1+j], message:`Compare ${left[i]} vs ${right[j]}`, codeLine:4, variables:{l,m,r}});
       if(left[i]<=right[j]){
-        a[k]=left[i++];
-        push({type:"overwrite", indices:[k], message:`Place ${a[k]} at ${k}`, codeLine:5});
+        a[k]=left[i++]; swaps++;
+        push({type:"overwrite", indices:[k], message:`Place ${a[k]} at ${k}`, codeLine:5, variables:{l,m,r}});
       } else {
-        a[k]=right[j++];
-        push({type:"overwrite", indices:[k], message:`Place ${a[k]} at ${k}`, codeLine:6});
+        a[k]=right[j++]; swaps++;
+        push({type:"overwrite", indices:[k], message:`Place ${a[k]} at ${k}`, codeLine:6, variables:{l,m,r}});
       }
       k++;
     }
-    while(i<left.length){ a[k]=left[i++]; push({type:"overwrite", indices:[k], message:`Copy remaining ${a[k]}`, codeLine:8}); k++; }
-    while(j<right.length){ a[k]=right[j++]; push({type:"overwrite", indices:[k], message:`Copy remaining ${a[k]}`, codeLine:8}); k++; }
-    push({type:"merged", indices:Array.from({length:r-l+1},(_,idx)=>l+idx), message:`Merged [${l}..${r}] → [${a.slice(l,r+1).join(", ")}] ✅`, codeLine:9});
+    while(i<left.length){ a[k]=left[i++]; swaps++; push({type:"overwrite", indices:[k], message:`Copy remaining ${a[k]}`, codeLine:8, variables:{l,m,r}}); k++; }
+    while(j<right.length){ a[k]=right[j++]; swaps++; push({type:"overwrite", indices:[k], message:`Copy remaining ${a[k]}`, codeLine:8, variables:{l,m,r}}); k++; }
+    push({type:"merged", indices:Array.from({length:r-l+1},(_,idx)=>l+idx), message:`Merged [${l}..${r}] → [${a.slice(l,r+1).join(", ")}] ✅`, codeLine:9, variables:{l,m,r}});
   }
   mergeSort(0,a.length-1);
-  push({type:"done", indices:[], message:"Merge Sort complete — stable & O(n log n) 🚀", codeLine:10});
+  push({type:"done", indices:[], message:"Merge Sort complete — stable & O(n log n) 🚀", codeLine:10, variables:{l:"-",m:"-",r:"-"}});
   return steps;
 }
 export const mergeCode=[
