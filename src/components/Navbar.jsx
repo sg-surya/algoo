@@ -31,6 +31,7 @@ export default function Navbar(){
         </form>
 
         <nav className="hidden md:flex items-center gap-3">
+          <Link to="/compare" className="hidden lg:inline-flex brutal-btn !rounded-full bg-brutalCyan !px-4 !py-2">Compare</Link>
           <Link to="/explorer" className="brutal-btn-dark !rounded-full px-6">Explore →</Link>
           <a href="https://github.com" target="_blank" className="w-10 h-10 rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm grid place-items-center hover:translate-y-[-1px] transition"><GitBranch size={16} className="text-black" /></a>
         </nav>

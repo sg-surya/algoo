@@ -6,7 +6,10 @@ function getCtx(){
   return ctx;
 }
 
+let lastVol=0.12;
+export function setVolume(v){ lastVol=v; }
 function tone(freq, duration, type="sine", gain=0.12, slideTo=null){
+  gain = gain * (lastVol/0.12); // scale by vol
   const c = getCtx();
   if(!c) return;
   const osc = c.createOscillator();

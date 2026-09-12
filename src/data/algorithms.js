@@ -9,7 +9,6 @@ import { shellSortSteps, shellCode } from "../algorithms/shellSort";
 import { radixSortSteps, radixCode } from "../algorithms/radixSort";
 import { linearSearchSteps, linearCode } from "../algorithms/linearSearch";
 import { binarySearchSteps, binaryCode } from "../algorithms/binarySearch";
-
 function comingSoonSteps(name){
   return (arr)=> {
     const steps=[];
@@ -218,60 +217,6 @@ export const algorithms = [
     complexity: { best: "O(1)", avg: "O(log n)", worst: "O(log n)" },
     whenToUse: "Sorted", pros: ["Log n"], cons: ["Sorted needed"],
     quiz: [{ q: "Sorted chahiye?", options: ["Haan","Nahi"], ans: 0 }],
-  },
-  {
-    id: "bfs",
-    name: "BFS",
-    category: "Graphs",
-    difficulty: "Medium",
-    time: "O(V+E)",
-    space: "O(V)",
-    stable: null,
-    personality: "Level-by-level explorer 🌊",
-    hindi: "Pehle paas wale, phir door wale.",
-    description: "Breadth-first traversal via queue.",
-    analogy: "Paani ka failna — level by level.",
-    realWorld: "Shortest path unweighted.",
-    stepsFn: comingSoonSteps("BFS"), code: ["def bfs(graph, start):","    queue=[start]; visited={start}","    while queue:","        u=queue.pop(0)","        for v in graph[u]: if v not in visited: ..."],
-    complexity: { best: "O(V+E)", avg: "O(V+E)", worst: "O(V+E)" },
-    whenToUse: "Shortest path", pros: ["Levels"], cons: ["Memory"],
-    quiz: [{ q: "BFS uses?", options: ["Queue","Stack"], ans: 0 }],
-  },
-  {
-    id: "dfs",
-    name: "DFS",
-    category: "Graphs",
-    difficulty: "Medium",
-    time: "O(V+E)",
-    space: "O(V)",
-    stable: null,
-    personality: "Gehraai tak jao 🕳️",
-    hindi: "Ek rasta pakdo, end tak jao.",
-    description: "Depth-first via recursion/stack.",
-    analogy: "Bhool-bhulaiya me ek rasta pakadna.",
-    realWorld: "Topological sort, cycles.",
-    stepsFn: comingSoonSteps("DFS"), code: ["def dfs(u, visited):","    visited.add(u)","    for v in graph[u]:","        if v not in visited: dfs(v)"],
-    complexity: { best: "O(V+E)", avg: "O(V+E)", worst: "O(V+E)" },
-    whenToUse: "Paths/cycles", pros: ["Memory efficient"], cons: ["Not shortest"],
-    quiz: [{ q: "DFS uses?", options: ["Stack","Queue"], ans: 0 }],
-  },
-  {
-    id: "dijkstra",
-    name: "Dijkstra",
-    category: "Graphs",
-    difficulty: "Hard",
-    time: "O((V+E) log V)",
-    space: "O(V)",
-    stable: null,
-    personality: "Shortest path ka king 👑",
-    hindi: "Sabse sasta rasta dhoondo.",
-    description: "Greedy with priority queue for weighted graphs.",
-    analogy: "Har mod pe sabse kam kharcha wala rasta chuno.",
-    realWorld: "Maps, GPS.",
-    stepsFn: comingSoonSteps("Dijkstra"), code: ["def dijkstra(graph, src):","    dist={}; pq=[(0,src)]","    while pq:","        d,u=heappop(pq)","        ..."],
-    complexity: { best: "O((V+E)logV)", avg: "O((V+E)logV)", worst: "O((V+E)logV)" },
-    whenToUse: "Weighted shortest path", pros: ["Optimal"], cons: ["No negatives"],
-    quiz: [{ q: "Dijkstra works with negative?", options: ["No","Yes"], ans: 0 }],
   },
   {
     id: "jump-search",
