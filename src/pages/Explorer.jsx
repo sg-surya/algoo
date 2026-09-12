@@ -22,17 +22,29 @@ export default function Explorer(){
     });
   },[search,cat,diff]);
 
+  const counts = {
+    Sorting: algorithms.filter(a=>a.category==="Sorting").length,
+    Searching: algorithms.filter(a=>a.category==="Searching").length,
+    Graphs: algorithms.filter(a=>a.category==="Graphs").length,
+  };
+
   return (
     <div className="max-w-[1280px] mx-auto px-4 md:px-6 py-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight">ALGORITHM EXPLORER</h1>
-          <p className="font-bold text-black/60">Pick an algorithm, watch it think, read the code.</p>
+          <p className="font-bold text-black/60">15 algorithms • Sorting • Searching • Graphs — pick, watch, understand.</p>
         </div>
         <div className="relative w-full md:w-80">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/50"/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search bubble, quick..." className="w-full brutal-input pl-10 !shadow-brutal-sm !rounded-full" />
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search bubble, heap, bfs..." className="w-full brutal-input pl-10 !shadow-brutal-sm !rounded-full" />
         </div>
+      </div>
+      <div className="flex gap-2 text-xs font-black mb-6 flex-wrap">
+        <span className="px-2 py-1 rounded-full bg-brutalYellow border-[2px] border-black">{algorithms.length} TOTAL</span>
+        <span className="px-2 py-1 rounded-full bg-white border-[2px] border-black">{counts.Sorting} SORTING</span>
+        <span className="px-2 py-1 rounded-full bg-brutalCyan border-[2px] border-black">{counts.Searching} SEARCHING</span>
+        <span className="px-2 py-1 rounded-full bg-brutalPink border-[2px] border-black">{counts.Graphs} GRAPHS</span>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6 items-center">
@@ -41,9 +53,10 @@ export default function Explorer(){
           <button key={c} onClick={()=>setCat(c)} className={`px-4 py-2 rounded-full text-sm font-black border-[2.5px] border-black shadow-brutal-sm ${cat===c ? "bg-black text-white" : "bg-white text-black hover:bg-brutalYellow"}`}>{c.toUpperCase()}</button>
         ))}
         <div className="w-px h-6 bg-black mx-1 hidden md:block" />
-        {["All","Easy","Medium"].map(d=>(
+        {["All","Easy","Medium","Hard"].map(d=>(
           <button key={d} onClick={()=>setDiff(d)} className={`px-3 py-2 rounded-full text-xs font-black border-[2px] border-black ${diff===d ? "bg-brutalYellow shadow-brutal-sm" : "bg-white"}`}>{d.toUpperCase()}</button>
         ))}
+        <span className="ml-auto text-xs font-bold text-black/50">{filtered.length} shown</span>
       </div>
 
       <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-5">
