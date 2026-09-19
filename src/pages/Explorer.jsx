@@ -4,7 +4,7 @@ import { algorithms } from "../data/algorithms";
 import AlgorithmCard from "../components/AlgorithmCard";
 import { Search, SlidersHorizontal } from "lucide-react";
 
-const categories = ["All","Sorting","Searching","Graphs"];
+const categories = ["All","Sorting","Searching","Graphs","Trees"];
 
 export default function Explorer(){
   const [params]=useSearchParams();
@@ -26,6 +26,7 @@ export default function Explorer(){
     Sorting: algorithms.filter(a=>a.category==="Sorting").length,
     Searching: algorithms.filter(a=>a.category==="Searching").length,
     Graphs: algorithms.filter(a=>a.category==="Graphs").length,
+    Trees: algorithms.filter(a=>a.category==="Trees").length,
   };
 
   return (
@@ -33,7 +34,7 @@ export default function Explorer(){
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight">ALGORITHM EXPLORER</h1>
-          <p className="font-bold text-black/60">15 algorithms • Sorting • Searching • Graphs — pick, watch, understand.</p>
+          <p className="font-bold text-black/60">{algorithms.length} algorithms • Sorting • Searching • Graphs • Trees — pick, watch, understand.</p>
         </div>
         <div className="relative w-full md:w-80">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-black/50"/>
@@ -45,6 +46,7 @@ export default function Explorer(){
         <span className="px-2 py-1 rounded-full bg-white border-[2px] border-black">{counts.Sorting} SORTING</span>
         <span className="px-2 py-1 rounded-full bg-brutalCyan border-[2px] border-black">{counts.Searching} SEARCHING</span>
         <span className="px-2 py-1 rounded-full bg-brutalPink border-[2px] border-black">{counts.Graphs} GRAPHS</span>
+        <span className="px-2 py-1 rounded-full bg-brutalLime border-[2px] border-black">{counts.Trees} TREES</span>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6 items-center">

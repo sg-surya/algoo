@@ -13,6 +13,7 @@ import { bfsSteps, bfsCode } from "../algorithms/bfs";
 import { dfsSteps, dfsCode } from "../algorithms/dfs";
 import { dijkstraSteps, dijkstraCode } from "../algorithms/dijkstra";
 import { jumpSearchSteps, jumpCode } from "../algorithms/jumpSearch";
+import { bstInsertSteps, bstSearchSteps, inorderSteps, bstInsertCode, bstSearchCode, inorderCode } from "../algorithms/trees";
 
 function comingSoonSteps(name){
   return (arr)=> {
@@ -294,6 +295,60 @@ export const algorithms = [
     complexity: { best: "O(1)", avg: "O(√n)", worst: "O(√n)" },
     whenToUse: "Sorted large", pros: ["Less jumps"], cons: ["Slower than binary"],
     quiz: [{ q: "Jump step?", options: ["√n","n/2"], ans: 0 }],
+  },
+  {
+    id: "bst-insert",
+    name: "BST Insert",
+    category: "Trees",
+    difficulty: "Easy",
+    time: "O(h)",
+    space: "O(h)",
+    stable: null,
+    personality: "Ped lagao 🌳",
+    hindi: "Chhota left, bada right — tree banao.",
+    description: "Inserts values into Binary Search Tree step by step.",
+    analogy: "Library me books ko topic se almari me lagana.",
+    realWorld: "BST, maps, sets.",
+    stepsFn: bstInsertSteps, code: bstInsertCode,
+    complexity: { best: "O(log n)", avg: "O(log n)", worst: "O(n)" },
+    whenToUse: "Sorted data chahiye + fast search", pros: ["Simple"], cons: ["Skewed worst"],
+    quiz: [{ q: "Chhota kahan?", options: ["Left","Right"], ans: 0 }],
+  },
+  {
+    id: "bst-search",
+    name: "BST Search",
+    category: "Trees",
+    difficulty: "Easy",
+    time: "O(h)",
+    space: "O(1)",
+    stable: null,
+    personality: "Tree me dhoondo 🔍",
+    hindi: "Root se start, left/right decide karo.",
+    description: "Searches target in BST by comparing at each level.",
+    analogy: "Almari me book dhoondhna — left ya right?",
+    realWorld: "Fast lookup.",
+    stepsFn: bstSearchSteps, code: bstSearchCode,
+    complexity: { best: "O(1)", avg: "O(log n)", worst: "O(n)" },
+    whenToUse: "BST me lookup", pros: ["Fast avg"], cons: ["Skewed slow"],
+    quiz: [{ q: "Target < node?", options: ["Left","Right"], ans: 0 }],
+  },
+  {
+    id: "inorder-traversal",
+    name: "Inorder Traversal",
+    category: "Trees",
+    difficulty: "Easy",
+    time: "O(n)",
+    space: "O(h)",
+    stable: null,
+    personality: "Left-Root-Right 🚶",
+    hindi: "Left, phir khud, phir right — sorted milega.",
+    description: "Visits BST in Left → Root → Right order (gives sorted output).",
+    analogy: "Line me chhote se bade tak milna.",
+    realWorld: "BST sort, expression trees.",
+    stepsFn: inorderSteps, code: inorderCode,
+    complexity: { best: "O(n)", avg: "O(n)", worst: "O(n)" },
+    whenToUse: "Sorted output", pros: ["Sorted"], cons: ["Recursion"],
+    quiz: [{ q: "Inorder order?", options: ["L-Root-R","Root-L-R"], ans: 0 }],
   },
 ];
 

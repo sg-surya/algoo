@@ -3,7 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { getAlgo, algorithms } from "../data/algorithms";
 import ArrayBars from "../components/ArrayBars";
 import GraphCanvas from "../components/GraphCanvas";
-import { Play, Pause, SkipForward, RotateCcw, Shuffle, Gauge, Code2, Brain, Clock, Layers, Volume2, VolumeX, Share2, Copy } from "lucide-react";
+import TreeCanvas from "../components/TreeCanvas";
+import { Play, Pause, SkipForward, RotateCcw, Shuffle, Volume2, VolumeX, Share2, Check, Settings2, ArrowLeft } from "lucide-react";
 import { playForStep, setVolume } from "../utils/sound";
 
 function genArray(n=8, max=30){ return Array.from({length:n},()=> Math.floor(Math.random()* (max-4))+5); }
@@ -17,7 +18,9 @@ export default function AlgorithmPage(){
   const algo = getAlgo(id) || algorithms[0];
   const isGraph = algo.category==="Graphs";
   const isSearch = algo.category==="Searching";
-  // shareable: read arr from url once (no hook to avoid rerender loop)
+  const isTree = algo.category==="Trees";
+  const needsTarget = isSearch || id==="bst-search";
+
   const getUrlParams = ()=>{
     try{
       const sp = new URLSearchParams(window.location.search);
@@ -32,16 +35,17 @@ export default function AlgorithmPage(){
   const [arr, setArr] = useState(initialArr);
   const [target, setTarget] = useState(initialTarget);
   const [targetInput, setTargetInput] = useState(String(initialTarget));
-  const [steps, setSteps] = useState(()=> isGraph ? algo.stepsFn() : isSearch ? algo.stepsFn(initialArr, initialTarget) : algo.stepsFn(initialArr));
+  const [steps, setSteps] = useState(()=> isGraph ? algo.stepsFn() : (isSearch || isTree) ? algo.stepsFn(initialArr, initialTarget) : algo.stepsFn(initialArr));
   const [idx, setIdx] = useState(isNaN(urlStep)?0: Math.min(urlStep, 1000));
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(500);
-  const [size, setSize] = useState(initialArr.length);
+  const [speedLabel, setSpeedLabel] = useState("Normal");
+  const speed = speedLabel==="Slow" ? 800 : speedLabel==="Fast" ? 200 : 450;
   const [customInput, setCustomInput] = useState(initialArr.join(", "));
   const [customErr, setCustomErr] = useState("");
-  const [soundOn, setSoundOn] = useState(true);
-  const [vol, setVol] = useState(0.12);
+  const [soundOn, setSoundOn] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [learnTab, setLearnTab] = useState("story");
   const prevIdxRef = useRef(0);
   const lastSoundRef = useRef(0);
   const timerRef = useRef(null);
@@ -53,60 +57,48 @@ export default function AlgorithmPage(){
   const sorted = steps.slice(0, idx+1).filter(s=>s.type==="mark_sorted").flatMap(s=>s.indices);
   const pivotIdx = cur?.type==="pick_pivot" || cur?.type==="compare" ? cur.indices[1] : null;
   const vars = cur?.variables || {};
-  const comps = vars.comps ?? steps.slice(0,idx+1).filter(s=>s.type==="compare").length;
-  const swaps = vars.swaps ?? steps.slice(0,idx+1).filter(s=>s.type==="swap_done").length;
+  const comps = vars.comps ?? 0;
+  const swaps = vars.swaps ?? 0;
   const graph = cur?.graph;
+  const tree = cur?.tree;
+  const varLine = Object.entries(vars).filter(([k])=>k!=="comps"&&k!=="swaps").map(([k,v])=>`${k}=${v}`).join("  ");
 
   const rebuild = (newArr, newTarget = target)=>{
-    const s = isGraph ? algo.stepsFn() : isSearch ? algo.stepsFn(newArr, newTarget) : algo.stepsFn(newArr);
+    const s = isGraph ? algo.stepsFn() : (isSearch || isTree) ? algo.stepsFn(newArr, newTarget) : algo.stepsFn(newArr);
     setSteps(s); setIdx(0); setPlaying(false);
   };
 
-  // clamp idx if out of bounds (e.g., switching from 40-step bubble to 18-step dijkstra via share link)
-  useEffect(()=>{
-    if(idx >= steps.length) setIdx(0);
-  },[steps.length]);
+  useEffect(()=>{ if(idx >= steps.length) setIdx(0); },[steps.length]);
 
-  // SEO + isGraph switch
   useEffect(()=>{
     document.title = `${algo.name} — AlgoVerse`;
-    // rebuild for new algo: if graph, ignore arr
     if(isGraph){
       const s = algo.stepsFn();
       setSteps(s); setIdx(0); setPlaying(false);
-    } else if(isSearch){
+    } else if(isSearch || isTree){
       const valid = arr && arr.length>=3 ? arr : [8,3,5,1,7,2];
       const validTarget = target ?? valid[Math.floor(valid.length/2)];
       setTargetInput(String(validTarget));
       const s = algo.stepsFn(valid, validTarget);
       setSteps(s); setIdx(0); setPlaying(false);
     } else {
-      // if url had graph previous, arr might be stale — ensure arr valid
       const valid = arr && arr.length>=3 ? arr : [8,3,5,1,7,2];
       rebuild(valid);
     }
-    // meta description
-    const meta = document.querySelector('meta[name="description"]');
-    if(meta) meta.content = algo.description;
-    else {
-      const m=document.createElement("meta"); m.name="description"; m.content=algo.description; document.head.appendChild(m);
-    }
+    // eslint-disable-next-line
   },[id]);
 
-  // shareable url sync - use history.replaceState to avoid React Router remount blank
   useEffect(()=>{
     if(isGraph) return;
     try{
       const params = new URLSearchParams();
       params.set("arr", arr.join(","));
-      if(isSearch) params.set("target", String(target));
+      if(needsTarget) params.set("target", String(target));
       if(idx>0) params.set("step", String(idx));
-      const newUrl = `${window.location.pathname}?${params.toString()}`;
-      window.history.replaceState(null, "", newUrl);
+      window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
     }catch{}
-  },[arr, idx, isGraph, isSearch, target]);
+  },[arr, idx, isGraph, needsTarget, target]);
 
-  // autoplay
   useEffect(()=>{
     if(playing){
       timerRef.current = setTimeout(()=>{
@@ -117,308 +109,206 @@ export default function AlgorithmPage(){
     return ()=> clearTimeout(timerRef.current);
   },[playing, idx, steps.length, speed]);
 
-  useEffect(()=>{ setVolume(vol); },[vol]);
-  // sound throttle: min 110ms, not on scrub burst, respect vol
+  useEffect(()=>{ setVolume(0.1); },[]);
   useEffect(()=>{
     if(!soundOn) return;
     if(prevIdxRef.current === idx) return;
     const now=Date.now();
-    if(now - lastSoundRef.current < 110) return;
-    // don't play on huge jump (scrub)
+    if(now - lastSoundRef.current < 120) return;
     if(Math.abs(idx - prevIdxRef.current) > 3) { prevIdxRef.current=idx; return; }
     lastSoundRef.current=now;
-    if(idx!==0) try{ playForStep(cur); }catch(e){ console.warn("sound",e); }
+    if(idx!==0) try{ playForStep(cur); }catch{}
     prevIdxRef.current = idx;
   },[idx, soundOn, cur]);
 
-  // keyboard a11y
   useEffect(()=>{
     const onKey=(e)=>{
-      if(e.target.tagName==="INPUT") return;
+      if(e.target.tagName==="INPUT" || e.target.tagName==="SELECT") return;
       if(e.code==="Space"){ e.preventDefault(); handlePlay(); }
       else if(e.code==="ArrowRight"){ setIdx(i=> Math.min(i+1, steps.length-1)); }
       else if(e.code==="ArrowLeft"){ setIdx(i=> Math.max(i-1,0)); }
-      else if(e.key==="r" || e.key==="R"){ setIdx(0); }
-      else if(e.key==="m"||e.key==="M"){ setSoundOn(v=>!v); }
     };
     window.addEventListener("keydown", onKey);
     return ()=> window.removeEventListener("keydown", onKey);
-  },[steps.length, playing]);
-
-  // reduced motion
-  const prefersReduced = typeof window!=="undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // eslint-disable-next-line
+  },[steps.length, playing, idx]);
 
   const handlePlay = ()=>{
     if(idx>=steps.length-1) { setIdx(0); setPlaying(true); }
     else setPlaying(!playing);
   };
-  const handleStep = ()=> setIdx(i=> Math.min(i+1, steps.length-1));
-  const handleReset = ()=> setIdx(0);
-  const handleShuffle = ()=>{
-    if(isGraph){ rebuild(); return; }
-    const n = genArray(size);
+  const applyNewArray = (n)=>{
     setArr(n); setCustomInput(n.join(", "));
     rebuild(n, target);
-  };
-  const handleSize = (n)=>{
-    setSize(n);
-    const na = genArray(n);
-    setArr(na); setCustomInput(na.join(", "));
-    rebuild(na, target);
   };
   const handleCustom = ()=>{
     const parsed = parseCustom(customInput);
-    if(!parsed){ setCustomErr("3-16 numbers, 1-99, comma se alag karo"); return; }
+    if(!parsed){ setCustomErr("3–16 numbers, comma se likho (e.g. 9, 8, 7, 6)"); return; }
     setCustomErr("");
-    setArr(parsed); setSize(parsed.length);
+    setArr(parsed);
     rebuild(parsed, target);
   };
-  const handlePreset = (type)=>{
-    let n;
-    if(type==="sorted") n=[...arr].sort((a,b)=>a-b);
-    else if(type==="reverse") n=[...arr].sort((a,b)=>b-a);
-    else if(type==="nearly"){ n=[...arr].sort((a,b)=>a-b); if(n.length>2){ const t=n[1]; n[1]=n[2]; n[2]=t; } }
-    else if(type==="same") n=Array(arr.length).fill(7);
-    else n=genArray(size);
-    setArr(n); setCustomInput(n.join(", "));
-    rebuild(n, target);
-  };
-  const handleTargetSet = ()=>{
+  const handleTargetGo = ()=>{
     const v = Number(targetInput);
-    if(isNaN(v)){ setCustomErr("Target ek number hona chahiye"); return; }
-    setCustomErr("");
+    if(isNaN(v)) return;
     setTarget(v);
     rebuild(arr, v);
   };
-  const handleRandomTarget = (mode)=>{
-    let v;
-    if(mode==="present"){
-      v = arr[Math.floor(Math.random()*arr.length)];
-    } else {
-      // missing: max+ random that is not in arr
-      const max = Math.max(...arr);
-      v = max + 5 + Math.floor(Math.random()*5);
-      if(arr.includes(v)) v += 20;
-    }
-    setTarget(v); setTargetInput(String(v));
-    rebuild(arr, v);
-  };
-  const handleCopyLink=async()=>{
-    const url = window.location.href;
-    await navigator.clipboard.writeText(url);
-    setCopied(true); setTimeout(()=> setCopied(false),1500);
-  };
+
+  const progress = steps.length>1 ? (idx/(steps.length-1))*100 : 0;
 
   return (
-    <div className="max-w-[1280px] mx-auto px-4 md:px-6 py-4 grid lg:grid-cols-[220px_1fr] gap-6">
-      <aside className="hidden lg:block sticky top-[76px] h-fit space-y-3" aria-label="Algorithm navigation">
-        <div className="text-xs font-black tracking-widest">EXPLORE</div>
-        <div className="space-y-2">
-          <div className="text-xs font-black px-2">SORTING</div>
-          {algorithms.filter(a=>a.category==="Sorting").map(a=>(
-            <Link key={a.id} to={`/algorithms/${a.id}`} className={`block px-3 py-2.5 rounded-xl text-sm font-black border-[2.5px] border-black shadow-brutal-sm ${a.id===algo.id ? "bg-black text-white" : "bg-white hover:bg-brutalYellow"}`} aria-current={a.id===algo.id?"page":undefined}>{a.name.toUpperCase()}</Link>
-          ))}
-          <div className="text-xs font-black px-2 pt-2">SEARCHING</div>
-          {algorithms.filter(a=>a.category==="Searching").map(a=>(
-            <Link key={a.id} to={`/algorithms/${a.id}`} className={`block px-3 py-2.5 rounded-xl text-sm font-black border-[2.5px] border-black ${a.id===algo.id ? "bg-black text-white shadow-brutal-sm" : "bg-white"}`}>{a.name.toUpperCase()}</Link>
-          ))}
-          <div className="text-xs font-black px-2 pt-2">GRAPHS</div>
-          {algorithms.filter(a=>a.category==="Graphs").map(a=>(
-            <Link key={a.id} to={`/algorithms/${a.id}`} className={`block px-3 py-2.5 rounded-xl text-sm font-black border-[2.5px] border-black ${a.id===algo.id ? "bg-black text-white shadow-brutal-sm" : "bg-white"}`}>{a.name.toUpperCase()}</Link>
-          ))}
+    <div className="max-w-[1100px] mx-auto px-4 md:px-6 py-5">
+      {/* Simple header */}
+      <div className="flex items-center gap-3 mb-4">
+        <Link to="/explorer" className="w-9 h-9 grid place-items-center rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm" aria-label="Back to explorer"><ArrowLeft size={16} strokeWidth={3}/></Link>
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-black tracking-tight leading-none truncate">{algo.name} <span className="text-xs align-middle ml-1 px-2 py-0.5 rounded-full border-[2px] border-black bg-brutalYellow">{algo.time}</span></h1>
+          <p className="text-sm text-black/60 font-medium truncate">"{algo.personality}"</p>
         </div>
-      </aside>
+        <div className="ml-auto flex items-center gap-2">
+          <button onClick={()=> setSoundOn(v=>!v)} className="w-9 h-9 grid place-items-center rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm" title="Sound on/off" aria-label="Toggle sound">
+            {soundOn ? <Volume2 size={16}/> : <VolumeX size={16} className="opacity-40"/>}
+          </button>
+          <button onClick={async()=>{ await navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(()=>setCopied(false),1200); }} className="w-9 h-9 grid place-items-center rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm" title="Copy link" aria-label="Copy link">
+            {copied ? <Check size={16}/> : <Share2 size={16}/>}
+          </button>
+        </div>
+      </div>
 
-      <div className="space-y-4 min-w-0">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3 flex-wrap">{algo.name.toUpperCase()} <span className={`brutal-badge ${algo.difficulty==="Easy" ? "bg-brutalLime" : algo.difficulty==="Hard" ? "bg-brutalPink" : "bg-brutalYellow"}`}>{algo.difficulty.toUpperCase()}</span></h1>
-            <p className="font-bold italic text-black/70 text-sm">"{algo.personality}"</p>
-            <p className="font-medium text-black/60 text-sm mt-1">{algo.hindi}</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="px-3 py-1.5 rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm text-xs font-black flex items-center gap-1"><Clock size={12} strokeWidth={3}/> {algo.time}</span>
-            <span className="px-3 py-1.5 rounded-full bg-brutalCyan border-[2.5px] border-black shadow-brutal-sm text-xs font-black">{algo.space} SPACE</span>
-          </div>
+      {/* Main visual card — only 3 actions visible */}
+      <div className="brutal-card p-4 md:p-6 !bg-[#FFFDF5]">
+        {/* legend — one subtle line */}
+        <div className="text-[11px] font-bold text-black/50 mb-2 flex flex-wrap gap-3">
+          {isTree ? <><span>● Current</span><span>● Visited</span><span>● Found</span></> :
+          !isGraph ? (
+            isSearch ? <><span>● Compare</span><span className="text-black">● Target 🎯</span><span>● Found</span></> :
+            <><span>● Compare</span><span>● Swap</span><span>● Sorted</span></>
+          ) : <><span>● Current</span><span>● Visited</span></>}
+          <span className="ml-auto hidden sm:inline">Step {idx+1}/{steps.length}</span>
         </div>
 
-        <div key={id} className="brutal-card p-4 md:p-6 !bg-[#FFFDF5]">
-          {!isGraph ? (
-            <>
-              <div className="flex flex-wrap gap-2 text-[11px] font-black mb-3" aria-label="Color legend">
-                <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalYellow border border-black rounded-full"/> COMPARE</span>
-                {isSearch ? (
-                  <>
-                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalLime border border-black rounded-full"/> FOUND</span>
-                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalCyan border border-black rounded-full"/> TARGET 🎯</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalPink border border-black rounded-full"/> SWAP</span>
-                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalLime border border-black rounded-full"/> SORTED</span>
-                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalCyan border border-black rounded-full"/> PIVOT/KEY</span>
-                  </>
-                )}
-                <span className="ml-auto hidden md:flex items-center gap-1.5 text-black/50">💡 {algo.analogy?.slice(0,55)}…</span>
-              </div>
-              {isSearch && (
-                <div className="mb-3 brutal-card p-3 !bg-brutalCyan flex flex-col md:flex-row gap-3 md:items-end">
-                  <div className="flex-1">
-                    <div className="text-xs font-black">🎯 KYA DHOONDHNA HAI? (TARGET)</div>
-                    <div className="flex gap-2 mt-1">
-                      <input value={targetInput} onChange={e=> setTargetInput(e.target.value)} onKeyDown={e=> { if(e.key==="Enter") handleTargetSet(); }} placeholder="e.g. 7" type="number" className="w-28 brutal-input !py-2 text-sm font-mono font-black text-center" aria-label="Search target" />
-                      <button onClick={handleTargetSet} className="brutal-btn !py-2 bg-black text-white">Search karo</button>
-                      <span className={`brutal-badge self-center ${array.includes(target) ? "bg-brutalLime" : "bg-brutalPink"}`}>{array.includes(target) ? "MILEGA ✓" : "NAHI MILEGA ✕"}</span>
-                    </div>
-                    <div className="text-[11px] font-bold text-black/60 mt-1">
-                      {id==="binary-search" || id==="jump-search" ? "Note: array auto-sort ho jayega (searching ko sorted chahiye)." : "Unsorted bhi chalega — ek-ek karke scan hoga."} • Target={target}
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    <button onClick={()=> handleRandomTarget("present")} className="brutal-btn !py-1 !text-xs bg-brutalLime">Random present</button>
-                    <button onClick={()=> handleRandomTarget("missing")} className="brutal-btn !py-1 !text-xs bg-brutalPink">Random missing</button>
-                  </div>
-                </div>
-              )}
-              <ArrayBars array={array} activeIndices={isCompare ? active : []} sortedIndices={sorted} pivotIndex={pivotIdx} targetValue={isSearch ? target : null} />
-            </>
-          ) : (
-            <>
-              <div className="flex flex-wrap gap-2 text-[11px] font-black mb-3">
-                <span className="flex items-center gap-1.5 bg-brutalPink border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalPink border border-black rounded-full"/> CURRENT</span>
-                <span className="flex items-center gap-1.5 bg-brutalLime border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalLime border border-black rounded-full"/> VISITED</span>
-                <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-white border border-black rounded-full"/> UNVISITED</span>
-              </div>
-              {graph ? (
-                <>
-                  <GraphCanvas graph={graph} current={cur?.current} visited={graph?.visited} />
-                  {graph?.queue && <div className="text-xs font-mono font-bold text-center mt-1">Queue: [{graph.queue.join(", ")}]</div>}
-                  {graph?.stack && <div className="text-xs font-mono font-bold text-center mt-1">Stack: [{graph.stack.join(", ")}]</div>}
-                  {graph?.dist && <div className="text-xs font-mono font-bold text-center mt-1">Dist: {Object.entries(graph.dist).map(([k,v])=> `${k}:${v===1e9?"∞":v}`).join(" ")}</div>}
-                </>
-              ) : (
-                <div className="text-center py-12 font-black border-[2.5px] border-dashed border-black rounded-xl">Loading graph…</div>
-              )}
-            </>
-          )}
-
-          <div className="mt-4">
-            <div className="flex items-center gap-2 text-xs font-black mb-1"><span>TIMELINE</span><span className="ml-auto font-mono">{idx+1} / {steps.length}</span></div>
-            <input type="range" min={0} max={steps.length-1} value={idx} onChange={e=> setIdx(Number(e.target.value))} className="w-full accent-black h-2" aria-label="Timeline scrubber" />
+        {/* TARGET — always visible for search + bst-search */}
+        {needsTarget && !isGraph && (
+          <div className="mb-3 rounded-xl border-[2.5px] border-black bg-brutalCyan p-2.5 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-black">🎯 FIND:</span>
+            <input value={targetInput} onChange={e=> setTargetInput(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter") handleTargetGo(); }} type="number" className="w-20 brutal-input !py-1 text-center font-mono font-black !text-sm" aria-label="Target value" />
+            <button onClick={handleTargetGo} className="brutal-btn !py-1 bg-black text-white !text-xs">Go</button>
+            <button onClick={()=>{ const v=arr[Math.floor(Math.random()*arr.length)]; setTarget(v); setTargetInput(String(v)); rebuild(arr,v); }} className="brutal-btn !py-1 !text-xs bg-white">Random</button>
+            <span className={`text-[11px] font-black px-2 py-0.5 rounded-full border-[2px] border-black ${array.includes(target) ? "bg-brutalLime" : "bg-brutalPink"}`}>{array.includes(target) ? "MILEGA ✓" : "NAHI MILEGA ✕"}</span>
           </div>
+        )}
 
-          <div className="mt-3 grid md:grid-cols-[1fr_auto] gap-3">
-            <div className="p-3 rounded-xl bg-brutalYellow border-[2.5px] border-black shadow-brutal-sm">
-              <div className="text-xs font-black text-black/60">STEP {idx+1}/{steps.length} — {cur?.type?.toUpperCase()}</div>
-              <div className="text-sm font-bold leading-tight">{cur?.message}</div>
-            </div>
-            <div className="flex md:flex-col gap-2">
-              <div className="flex-1 md:w-[160px] rounded-xl bg-white border-[2.5px] border-black p-2 shadow-brutal-sm flex items-center justify-between" aria-live="polite">
-                <div className="text-xs font-black"><div className="text-black/50 text-[10px]">COMPARISONS</div><div className="text-lg leading-none">{isGraph ? graph?.visited?.length||0 : comps}</div></div>
-                <div className="h-8 w-px bg-black/10 mx-2"/>
-                <div className="text-xs font-black text-right"><div className="text-black/50 text-[10px]">{isGraph?"VISITED":"SWAPS"}</div><div className="text-lg leading-none">{isGraph ? (graph?.visitedOrder?.length||0) : swaps}</div></div>
-              </div>
-              <div className="hidden md:block rounded-xl bg-black text-white border-[2.5px] border-black p-2 shadow-brutal-sm">
-                <div className="text-[10px] font-black text-white/60 tracking-widest">VARIABLES</div>
-                <div className="font-mono text-xs font-bold flex flex-wrap gap-1.5 mt-1">
-                  {Object.entries(vars).filter(([k])=>k!=="comps"&&k!=="swaps").map(([k,v])=>(
-                    <span key={k} className="bg-white text-black px-1.5 py-0.5 rounded border border-black">{k}={String(v)}</span>
-                  ))}
-                  {graph?.current && <span className="bg-brutalPink text-black px-1.5 py-0.5 rounded border border-black">cur={graph.current}</span>}
-                </div>
-              </div>
-            </div>
+        {/* CUSTOM DATA — always visible */}
+        {!isGraph && (
+          <div className="mb-3 rounded-xl border-[2px] border-black bg-white p-2.5 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-black">✏️ DATA:</span>
+            <input value={customInput} onChange={e=> setCustomInput(e.target.value)} placeholder="e.g. 8, 3, 5, 1, 7, 2" className="flex-1 min-w-[160px] brutal-input !py-1 !text-xs font-mono" aria-label="Custom data" />
+            <button onClick={handleCustom} className="brutal-btn !py-1 bg-brutalYellow !text-xs">Set</button>
+            {customErr && <span className="text-xs font-bold text-red-600 w-full">{customErr}</span>}
           </div>
-          <div className="md:hidden mt-2 rounded-xl bg-black text-white border-[2.5px] border-black p-2 flex flex-wrap gap-1.5">
-            <span className="text-[10px] font-black text-white/60 w-full">VARIABLES</span>
-            {Object.entries(vars).filter(([k])=>k!=="comps"&&k!=="swaps").map(([k,v])=>(
-              <span key={k} className="bg-white text-black px-1.5 py-0.5 rounded border border-black font-mono text-xs font-bold">{k}={String(v)}</span>
-            ))}
-          </div>
+        )}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button onClick={handlePlay} className={`brutal-btn !rounded-full ${playing ? "bg-brutalPink" : "bg-brutalYellow"}`} aria-label={playing?"Pause":"Play"} style={prefersReduced ? {transition:"none"} : {}}>
-              {playing ? <><Pause size={16} strokeWidth={3}/> PAUSE</> : <><Play size={16} strokeWidth={3}/> PLAY</>}
-            </button>
-            <button onClick={handleStep} className="brutal-btn" aria-label="Next step"><SkipForward size={16} strokeWidth={3}/> STEP</button>
-            <button onClick={handleReset} className="brutal-btn bg-white" aria-label="Reset"><RotateCcw size={16} strokeWidth={3}/> RESET</button>
-            {!isGraph && <button onClick={handleShuffle} className="brutal-btn bg-brutalCyan"><Shuffle size={16} strokeWidth={3}/> Random</button>}
-            <button onClick={()=> setSoundOn(v=>!v)} className={`brutal-btn ${soundOn ? "bg-brutalLime" : "bg-white"} !px-3`} aria-label={soundOn?"Mute":"Unmute"}>
-              {soundOn ? <Volume2 size={16} strokeWidth={3}/> : <VolumeX size={16} strokeWidth={3}/>} {soundOn ? "Sound" : "Mute"}
-            </button>
-            {soundOn && <input type="range" min={0} max={0.3} step={0.02} value={vol} onChange={e=> setVol(parseFloat(e.target.value))} className="w-16 accent-black hidden md:block" aria-label="Volume" title="Volume" />}
-            <button onClick={handleCopyLink} className="brutal-btn bg-white !px-3" aria-label="Copy link">
-              {copied ? <><Copy size={14}/> Copied!</> : <><Share2 size={14}/> Share</>}
-            </button>
-            <div className="ml-auto flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-2 text-xs font-black border-[2px] border-black rounded-full px-3 py-1.5 bg-white shadow-brutal-sm">
-                <Gauge size={14} strokeWidth={3}/> SPEED
-                <input type="range" min={80} max={1000} step={40} value={1000-speed} onChange={e=> setSpeed(1080 - e.target.value)} className="w-20 accent-black" aria-label="Speed" />
-              </div>
-              {!isGraph && (
-                <div className="flex items-center gap-1 text-xs font-black">
-                  <span>SIZE</span>
-                  {[6,8,12,16].map(n=>(
-                    <button key={n} onClick={()=>handleSize(n)} className={`w-8 h-8 rounded-full text-xs font-black border-[2.5px] border-black shadow-brutal-sm ${size===n ? "bg-black text-white" : "bg-white"}`} aria-label={`Size ${n}`}>{n}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="text-[11px] font-bold text-black/40 mt-2">Keys: <kbd className="border border-black px-1 rounded bg-white">Space</kbd> Play · <kbd className="border border-black px-1 rounded bg-white">→</kbd> Step · <kbd className="border border-black px-1 rounded bg-white">R</kbd> Reset · <kbd className="border border-black px-1 rounded bg-white">M</kbd> Mute</div>
+        {isTree ? (
+          tree ? <TreeCanvas tree={tree} /> :
+          <div className="text-center py-10 font-bold text-black/40">Loading…</div>
+        ) : !isGraph ? (
+          <ArrayBars array={array} activeIndices={isCompare ? active : []} sortedIndices={sorted} pivotIndex={pivotIdx} targetValue={needsTarget ? target : null} />
+        ) : (
+          graph ? <GraphCanvas graph={graph} current={cur?.current} visited={graph?.visited} /> :
+          <div className="text-center py-10 font-bold text-black/40">Loading…</div>
+        )}
 
+        {/* message — single line */}
+        <div className="mt-3 text-center">
+          <p className="text-[15px] font-bold leading-snug min-h-[24px]">{cur?.message}</p>
+          <p className="text-xs text-black/45 font-mono mt-1">Comparisons {comps} · {isGraph ? `Visited ${graph?.visited?.length||0}` : isTree ? `Visited ${tree?.visited?.length||tree?.order?.length||0}` : `Swaps ${swaps}`} {varLine && <span>· {varLine}</span>}</p>
+        </div>
+
+        {/* timeline — single slider */}
+        <div className="mt-3">
+          <input type="range" min={0} max={steps.length-1} value={idx} onChange={e=> setIdx(Number(e.target.value))} className="w-full accent-black" aria-label="Timeline" />
+          <div className="h-1 rounded-full bg-black/10 overflow-hidden"><div className="h-full bg-black" style={{width:`${progress}%`}}/></div>
+        </div>
+
+        {/* primary controls — only Play / Step / Reset */}
+        <div className="mt-4 flex items-center justify-center gap-2">
+          <button onClick={()=> setIdx(0)} className="brutal-btn bg-white !px-4" aria-label="Restart"><RotateCcw size={16} strokeWidth={3}/></button>
+          <button onClick={handlePlay} className={`brutal-btn !rounded-full !px-8 !py-3 text-base ${playing ? "bg-brutalPink" : "bg-black text-white"}`}>
+            {playing ? <><Pause size={18} strokeWidth={3}/> Pause</> : <><Play size={18} strokeWidth={3}/> {idx>=steps.length-1 ? "Replay" : "Play"}</>}
+          </button>
+          <button onClick={()=> setIdx(i=> Math.min(i+1, steps.length-1))} className="brutal-btn bg-white !px-4" aria-label="Next step"><SkipForward size={16} strokeWidth={3}/></button>
+        </div>
+
+        {/* speed — segmented, not slider */}
+        <div className="mt-3 flex items-center justify-center gap-1 text-xs font-black">
+          {["Slow","Normal","Fast"].map(s=>(
+            <button key={s} onClick={()=> setSpeedLabel(s)} className={`px-3 py-1 rounded-full border-[2px] border-black ${speedLabel===s ? "bg-black text-white" : "bg-white"}`}>{s}</button>
+          ))}
+          <span className="mx-2 text-black/20">|</span>
+          <button onClick={()=> setShowSettings(v=>!v)} className={`flex items-center gap-1 px-3 py-1 rounded-full border-[2px] border-black ${showSettings ? "bg-brutalYellow" : "bg-white"}`}>
+            <Settings2 size={12}/> {showSettings ? "Hide" : "Customize"}
+          </button>
           {!isGraph && (
-            <div className="mt-4 brutal-card p-3 !bg-white flex flex-col md:flex-row gap-3 md:items-end">
-              <div className="flex-1">
-                <div className="text-xs font-black">✏️ CUSTOM ARRAY</div>
-                <div className="flex gap-2 mt-1">
-                  <input value={customInput} onChange={e=> setCustomInput(e.target.value)} placeholder="e.g. 9, 8, 7, 6" className="flex-1 brutal-input !py-2 text-xs font-mono" aria-label="Custom array input" />
-                  <button onClick={handleCustom} className="brutal-btn !py-2 bg-brutalYellow">Set</button>
-                </div>
-                {customErr ? <div className="text-xs font-bold text-red-600 mt-1">{customErr}</div> : <div className="text-[11px] font-bold text-black/40 mt-1">3-16 nums, comma separated • try presets →</div>}
-              </div>
-              <div className="flex gap-1.5 flex-wrap md:max-w-[240px]">
-                <button onClick={()=>handlePreset("sorted")} className="brutal-btn !py-1 !text-xs">Sorted</button>
-                <button onClick={()=>handlePreset("reverse")} className="brutal-btn !py-1 !text-xs bg-brutalPink">Reverse</button>
-                <button onClick={()=>handlePreset("nearly")} className="brutal-btn !py-1 !text-xs bg-brutalCyan">Nearly</button>
-                <button onClick={()=>handlePreset("same")} className="brutal-btn !py-1 !text-xs">Same</button>
-              </div>
-            </div>
+            <button onClick={()=>{ const n=genArray(arr.length); applyNewArray(n); }} className="flex items-center gap-1 px-3 py-1 rounded-full border-[2px] border-black bg-white">
+              <Shuffle size={12}/> Shuffle
+            </button>
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="brutal-card p-5 !bg-white">
-            <div className="flex items-center gap-2 text-sm font-black mb-3"><span className="w-8 h-8 rounded-lg bg-black text-brutalYellow grid place-items-center"><Code2 size={16}/></span> CODE <span className="text-xs font-bold text-black/40 border border-black rounded-full px-2 py-0.5">PYTHON</span></div>
-            <div className="rounded-xl bg-[#F7F5EB] border-[2.5px] border-black p-3 font-mono text-xs leading-5 overflow-x-auto">
-              {algo.code.map((line,i)=>(
-                <div key={i} className={`px-2 py-0.5 rounded-lg border-l-[4px] ${cur?.codeLine===i ? "bg-brutalYellow border-black font-bold" : "border-transparent text-black/60"}`}>
-                  <span className="text-black/20 mr-3 select-none font-bold">{String(i+1).padStart(2," ")}</span>{line || " "}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="brutal-card p-5 space-y-3 !bg-white">
-            <div className="flex items-center gap-2 text-sm font-black"><span className="w-8 h-8 rounded-lg bg-brutalPink border-[2px] border-black grid place-items-center"><Brain size={16}/></span> WHAT'S HAPPENING</div>
-            <p className="text-sm font-medium text-black/70 leading-relaxed">{algo.description}</p>
-            <div className="p-3 rounded-xl bg-brutalYellow border-[2px] border-black text-xs font-bold">💡 <b>Analogy:</b> {algo.analogy}</div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-brutalLime border-[2.5px] border-black p-3 text-center shadow-brutal-sm"><div className="text-[10px] font-black tracking-widest">BEST</div><div className="font-mono text-sm font-black">{algo.complexity.best}</div></div>
-              <div className="rounded-xl bg-brutalYellow border-[2.5px] border-black p-3 text-center shadow-brutal-sm"><div className="text-[10px] font-black tracking-widest">AVG</div><div className="font-mono text-sm font-black">{algo.complexity.avg}</div></div>
-              <div className="rounded-xl bg-white border-[2.5px] border-black p-3 text-center shadow-brutal-sm"><div className="text-[10px] font-black tracking-widest">WORST</div><div className="font-mono text-sm font-black">{algo.complexity.worst}</div></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="brutal-card p-4">
-          <div className="text-sm font-black mb-2 flex items-center gap-2"><Layers size={14}/> JUMP TO STEP</div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {steps.map((s,i)=>(
-              <button key={i} onClick={()=> setIdx(i)} className={`shrink-0 w-8 h-8 rounded-full text-xs font-black border-[2.5px] border-black shadow-brutal-sm ${i===idx ? "bg-black text-white" : i<idx ? "bg-brutalYellow" : "bg-white"}`} aria-label={`Go to step ${i+1}`}>{i+1}</button>
+        {/* settings — only presets + size, data/target already visible above */}
+        {showSettings && !isGraph && (
+          <div className="mt-3 rounded-xl border-[2px] border-black bg-white p-2.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-black mr-1">Try:</span>
+            {[["Sorted","sorted"],["Reverse","reverse"],["Nearly","nearly"]].map(([label,t])=>(
+              <button key={t} onClick={()=>{ let n; if(t==="sorted") n=[...arr].sort((a,b)=>a-b); else if(t==="reverse") n=[...arr].sort((a,b)=>b-a); else { n=[...arr].sort((a,b)=>a-b); if(n.length>2){ const x=n[1]; n[1]=n[2]; n[2]=x; } } applyNewArray(n); }} className="px-2.5 py-1 text-xs font-black rounded-full border-[2px] border-black bg-white">{label}</button>
+            ))}
+            <span className="text-[11px] font-bold text-black/40 ml-1">Size:</span>
+            {[6,10,14].map(n=>(
+              <button key={n} onClick={()=>{ const na=genArray(n); applyNewArray(na); }} className="px-2 py-1 text-xs font-black rounded-full border-[2px] border-black bg-white">{n}</button>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Learn — tabs, not long scroll */}
+      <div className="mt-4 brutal-card p-4 md:p-5 !bg-white">
+        <div className="flex gap-1 mb-3">
+          {[["story","Story"],["code","Code"],["complexity","Complexity"]].map(([k,label])=>(
+            <button key={k} onClick={()=> setLearnTab(k)} className={`px-4 py-1.5 text-sm font-black rounded-full border-[2px] border-black ${learnTab===k ? "bg-black text-white" : "bg-white"}`}>{label}</button>
+          ))}
         </div>
+        {learnTab==="story" && (
+          <div className="text-sm leading-relaxed">
+            <p className="font-medium text-black/75">{algo.description}</p>
+            <div className="mt-2 p-2.5 rounded-xl bg-brutalYellow border-[2px] border-black text-[13px] font-bold">💡 {algo.analogy}</div>
+            <p className="mt-2 text-[13px] text-black/55 font-medium">Use: {algo.realWorld}</p>
+          </div>
+        )}
+        {learnTab==="code" && (
+          <div className="rounded-xl bg-[#F7F5EB] border-[2px] border-black p-2 font-mono text-xs leading-5 overflow-x-auto">
+            {algo.code.map((line,i)=>(
+              <div key={i} className={`px-2 py-0.5 rounded ${cur?.codeLine===i ? "bg-brutalYellow font-bold" : "text-black/55"}`}>
+                <span className="text-black/25 mr-2">{String(i+1).padStart(2," ")}</span>{line}
+              </div>
+            ))}
+          </div>
+        )}
+        {learnTab==="complexity" && (
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[["Best",algo.complexity.best,"bg-brutalLime"],["Avg",algo.complexity.avg,"bg-brutalYellow"],["Worst",algo.complexity.worst,"bg-white"]].map(([k,v,c])=>(
+              <div key={k} className={`rounded-xl border-[2px] border-black p-3 ${c}`}><div className="text-[10px] font-black">{k.toUpperCase()}</div><div className="font-mono font-black">{v}</div></div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* more algos — simple row */}
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+        {algorithms.filter(a=>a.category===algo.category).map(a=>(
+          <Link key={a.id} to={`/algorithms/${a.id}`} className={`shrink-0 px-3 py-1.5 text-xs font-black rounded-full border-[2px] border-black ${a.id===algo.id ? "bg-black text-white" : "bg-white"}`}>{a.name}</Link>
+        ))}
+        <Link to="/explorer" className="shrink-0 px-3 py-1.5 text-xs font-black rounded-full border-[2px] border-dashed border-black">All →</Link>
       </div>
     </div>
   );

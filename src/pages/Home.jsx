@@ -39,7 +39,7 @@ export default function Home(){
       <section className="grid md:grid-cols-2 gap-8 py-8 md:py-12 items-start">
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 text-xs font-black px-3 py-2 rounded-full bg-white border-[2.5px] border-black shadow-brutal-sm">
-            <span className="w-2 h-2 rounded-full bg-brutalLime border border-black animate-pulse" /> NEW — 15 ALGORITHMS LIVE • SORTING • SEARCHING • GRAPHS
+            <span className="w-2 h-2 rounded-full bg-brutalLime border border-black animate-pulse" /> NEW — {algorithms.length} ALGORITHMS LIVE • SORTING • SEARCHING • GRAPHS • TREES
           </div>
           <h1 className="text-[40px] md:text-[64px] font-black leading-[0.9] tracking-[-0.04em] text-black">
             STOP<br/>
@@ -53,11 +53,12 @@ export default function Home(){
             <Link to="/explorer" className="brutal-btn-dark !rounded-full px-7 py-3.5 text-base">Explore Algorithms <ArrowRight size={18} strokeWidth={3}/></Link>
             <Link to="/algorithms/bubble-sort" className="brutal-btn !rounded-full bg-white px-6 py-3.5"><Play size={16} strokeWidth={3}/> Try Bubble Sort</Link>
           </div>
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3 pt-1 flex-wrap">
             {[
-              {k:"9", l:"Sorting"},
-              {k:"3", l:"Searching"},
-              {k:"3", l:"Graphs"},
+              {k:String(algorithms.filter(a=>a.category==="Sorting").length), l:"Sorting"},
+              {k:String(algorithms.filter(a=>a.category==="Searching").length), l:"Searching"},
+              {k:String(algorithms.filter(a=>a.category==="Graphs").length), l:"Graphs"},
+              {k:String(algorithms.filter(a=>a.category==="Trees").length), l:"Trees"},
             ].map(s=>(
               <div key={s.l} className="brutal-card !rounded-xl px-4 py-2.5 flex items-center gap-2 !shadow-brutal-sm">
                 <span className="font-black text-xl leading-none">{s.k}</span><span className="text-xs font-bold text-black/60">{s.l}</span>
@@ -111,18 +112,19 @@ export default function Home(){
       <section className="py-10">
         <div className="flex items-end justify-between mb-6 gap-4">
           <h2 className="text-3xl font-black tracking-tight flex items-center gap-2"><Asterisk className="text-brutalPink fill-brutalPink" /> FEATURED</h2>
-          <Link to="/explorer" className="brutal-btn !py-2 !px-4">View all 15 <ArrowRight size={14} strokeWidth={3}/></Link>
+          <Link to="/explorer" className="brutal-btn !py-2 !px-4">View all {algorithms.length} <ArrowRight size={14} strokeWidth={3}/></Link>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {featured.map(a=> <AlgorithmCard key={a.id} algo={a} />)}
         </div>
         <div className="mt-8">
           <h3 className="font-black text-sm mb-3">BROWSE BY CATEGORY</h3>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             {[
-              {cat:"Sorting", count:9, desc:"Bubble to Radix — O(n²) se O(n+k) tak", color:"bg-brutalYellow"},
-              {cat:"Searching", count:3, desc:"Linear, Binary, Jump — O(n) vs O(log n)", color:"bg-brutalCyan"},
-              {cat:"Graphs", count:3, desc:"BFS, DFS, Dijkstra — traversal & paths", color:"bg-brutalPink"},
+              {cat:"Sorting", count:algorithms.filter(a=>a.category==="Sorting").length, desc:"Bubble to Radix", color:"bg-brutalYellow"},
+              {cat:"Searching", count:algorithms.filter(a=>a.category==="Searching").length, desc:"Linear, Binary, Jump", color:"bg-brutalCyan"},
+              {cat:"Graphs", count:algorithms.filter(a=>a.category==="Graphs").length, desc:"BFS, DFS, Dijkstra", color:"bg-brutalPink"},
+              {cat:"Trees", count:algorithms.filter(a=>a.category==="Trees").length, desc:"BST, Inorder — working", color:"bg-brutalLime"},
             ].map(b=>(
               <Link key={b.cat} to="/explorer" className={`brutal-card p-5 ${b.color} hover:shadow-brutal-lg hover:-translate-y-1 transition`}>
                 <div className="font-black text-lg">{b.cat.toUpperCase()} ({b.count})</div>
