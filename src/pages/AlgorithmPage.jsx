@@ -44,6 +44,7 @@ export default function AlgorithmPage(){
   const [customErr, setCustomErr] = useState("");
   const [soundOn, setSoundOn] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [learnTab, setLearnTab] = useState("story");
   const prevIdxRef = useRef(0);
@@ -286,12 +287,37 @@ export default function AlgorithmPage(){
           </div>
         )}
         {learnTab==="code" && (
-          <div className="rounded-xl bg-[#F7F5EB] border-[2px] border-black p-2 font-mono text-xs leading-5 overflow-x-auto">
-            {algo.code.map((line,i)=>(
-              <div key={i} className={`px-2 py-0.5 rounded ${cur?.codeLine===i ? "bg-brutalYellow font-bold" : "text-black/55"}`}>
-                <span className="text-black/25 mr-2">{String(i+1).padStart(2," ")}</span>{line}
-              </div>
-            ))}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-white border-[2px] border-black">PYTHON</span>
+              <button
+                onClick={async ()=>{
+                  const text = algo.code.join("\n");
+                  try { await navigator.clipboard.writeText(text); }
+                  catch {
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(ta);
+                  }
+                  setCodeCopied(true);
+                  setTimeout(()=> setCodeCopied(false), 1500);
+                }}
+                className="ml-auto flex items-center gap-1 px-3 py-1.5 text-xs font-black rounded-full border-[2px] border-black bg-white hover:bg-brutalYellow"
+                aria-label="Copy code"
+              >
+                {codeCopied ? <><Check size={13}/> Copied!</> : <><Copy size={13}/> Copy</>}
+              </button>
+            </div>
+            <div className="rounded-xl bg-[#F7F5EB] border-[2px] border-black p-2 font-mono text-xs leading-5 overflow-x-auto">
+              {algo.code.map((line,i)=>(
+                <div key={i} className={`px-2 py-0.5 rounded whitespace-pre ${cur?.codeLine===i ? "bg-brutalYellow font-bold" : "text-black/55"}`}>
+                  <span className="text-black/25 mr-2 select-none">{String(i+1).padStart(2," ")}</span>{line || " "}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {learnTab==="complexity" && (
