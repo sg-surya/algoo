@@ -4,7 +4,7 @@ import { getAlgo, algorithms } from "../data/algorithms";
 import ArrayBars from "../components/ArrayBars";
 import GraphCanvas from "../components/GraphCanvas";
 import TreeCanvas from "../components/TreeCanvas";
-import { Play, Pause, SkipForward, RotateCcw, Shuffle, Volume2, VolumeX, Share2, Check, Settings2, ArrowLeft } from "lucide-react";
+import { Play, Pause, SkipForward, RotateCcw, Shuffle, Volume2, VolumeX, Share2, Check, Settings2, ArrowLeft, Copy } from "lucide-react";
 import { playForStep, setVolume } from "../utils/sound";
 
 function genArray(n=8, max=30){ return Array.from({length:n},()=> Math.floor(Math.random()* (max-4))+5); }
