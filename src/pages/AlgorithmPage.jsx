@@ -16,19 +16,23 @@ export default function AlgorithmPage(){
   const { id } = useParams();
   const algo = getAlgo(id) || algorithms[0];
   const isGraph = algo.category==="Graphs";
+  const isSearch = algo.category==="Searching";
   // shareable: read arr from url once (no hook to avoid rerender loop)
   const getUrlParams = ()=>{
     try{
       const sp = new URLSearchParams(window.location.search);
-      return {arr: sp.get("arr"), step: sp.get("step")};
-    }catch{ return {arr:null, step:null}; }
+      return {arr: sp.get("arr"), step: sp.get("step"), target: sp.get("target")};
+    }catch{ return {arr:null, step:null, target:null}; }
   };
-  const _url = typeof window!=="undefined" ? getUrlParams() : {arr:null, step:null};
+  const _url = typeof window!=="undefined" ? getUrlParams() : {arr:null, step:null, target:null};
   const initialArr = _url.arr ? parseCustom(_url.arr) || [8,3,5,1,7,2] : [8,3,5,1,7,2];
   const urlStep = parseInt(_url.step||"0",10);
+  const initialTarget = _url.target!==null && _url.target!=="" && !isNaN(Number(_url.target)) ? Number(_url.target) : initialArr[Math.floor(initialArr.length/2)];
 
   const [arr, setArr] = useState(initialArr);
-  const [steps, setSteps] = useState(()=> isGraph ? algo.stepsFn() : algo.stepsFn(initialArr));
+  const [target, setTarget] = useState(initialTarget);
+  const [targetInput, setTargetInput] = useState(String(initialTarget));
+  const [steps, setSteps] = useState(()=> isGraph ? algo.stepsFn() : isSearch ? algo.stepsFn(initialArr, initialTarget) : algo.stepsFn(initialArr));
   const [idx, setIdx] = useState(isNaN(urlStep)?0: Math.min(urlStep, 1000));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(500);
@@ -53,8 +57,8 @@ export default function AlgorithmPage(){
   const swaps = vars.swaps ?? steps.slice(0,idx+1).filter(s=>s.type==="swap_done").length;
   const graph = cur?.graph;
 
-  const rebuild = (newArr)=>{
-    const s = isGraph ? algo.stepsFn() : algo.stepsFn(newArr);
+  const rebuild = (newArr, newTarget = target)=>{
+    const s = isGraph ? algo.stepsFn() : isSearch ? algo.stepsFn(newArr, newTarget) : algo.stepsFn(newArr);
     setSteps(s); setIdx(0); setPlaying(false);
   };
 
@@ -69,6 +73,12 @@ export default function AlgorithmPage(){
     // rebuild for new algo: if graph, ignore arr
     if(isGraph){
       const s = algo.stepsFn();
+      setSteps(s); setIdx(0); setPlaying(false);
+    } else if(isSearch){
+      const valid = arr && arr.length>=3 ? arr : [8,3,5,1,7,2];
+      const validTarget = target ?? valid[Math.floor(valid.length/2)];
+      setTargetInput(String(validTarget));
+      const s = algo.stepsFn(valid, validTarget);
       setSteps(s); setIdx(0); setPlaying(false);
     } else {
       // if url had graph previous, arr might be stale — ensure arr valid
@@ -89,11 +99,12 @@ export default function AlgorithmPage(){
     try{
       const params = new URLSearchParams();
       params.set("arr", arr.join(","));
+      if(isSearch) params.set("target", String(target));
       if(idx>0) params.set("step", String(idx));
       const newUrl = `${window.location.pathname}?${params.toString()}`;
       window.history.replaceState(null, "", newUrl);
     }catch{}
-  },[arr, idx, isGraph]);
+  },[arr, idx, isGraph, isSearch, target]);
 
   // autoplay
   useEffect(()=>{
@@ -147,20 +158,20 @@ export default function AlgorithmPage(){
     if(isGraph){ rebuild(); return; }
     const n = genArray(size);
     setArr(n); setCustomInput(n.join(", "));
-    rebuild(n);
+    rebuild(n, target);
   };
   const handleSize = (n)=>{
     setSize(n);
     const na = genArray(n);
     setArr(na); setCustomInput(na.join(", "));
-    rebuild(na);
+    rebuild(na, target);
   };
   const handleCustom = ()=>{
     const parsed = parseCustom(customInput);
     if(!parsed){ setCustomErr("3-16 numbers, 1-99, comma se alag karo"); return; }
     setCustomErr("");
     setArr(parsed); setSize(parsed.length);
-    rebuild(parsed);
+    rebuild(parsed, target);
   };
   const handlePreset = (type)=>{
     let n;
@@ -170,7 +181,27 @@ export default function AlgorithmPage(){
     else if(type==="same") n=Array(arr.length).fill(7);
     else n=genArray(size);
     setArr(n); setCustomInput(n.join(", "));
-    rebuild(n);
+    rebuild(n, target);
+  };
+  const handleTargetSet = ()=>{
+    const v = Number(targetInput);
+    if(isNaN(v)){ setCustomErr("Target ek number hona chahiye"); return; }
+    setCustomErr("");
+    setTarget(v);
+    rebuild(arr, v);
+  };
+  const handleRandomTarget = (mode)=>{
+    let v;
+    if(mode==="present"){
+      v = arr[Math.floor(Math.random()*arr.length)];
+    } else {
+      // missing: max+ random that is not in arr
+      const max = Math.max(...arr);
+      v = max + 5 + Math.floor(Math.random()*5);
+      if(arr.includes(v)) v += 20;
+    }
+    setTarget(v); setTargetInput(String(v));
+    rebuild(arr, v);
   };
   const handleCopyLink=async()=>{
     const url = window.location.href;
@@ -216,12 +247,40 @@ export default function AlgorithmPage(){
             <>
               <div className="flex flex-wrap gap-2 text-[11px] font-black mb-3" aria-label="Color legend">
                 <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalYellow border border-black rounded-full"/> COMPARE</span>
-                <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalPink border border-black rounded-full"/> SWAP</span>
-                <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalLime border border-black rounded-full"/> SORTED</span>
-                <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalCyan border border-black rounded-full"/> PIVOT/KEY</span>
+                {isSearch ? (
+                  <>
+                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalLime border border-black rounded-full"/> FOUND</span>
+                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalCyan border border-black rounded-full"/> TARGET 🎯</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalPink border border-black rounded-full"/> SWAP</span>
+                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalLime border border-black rounded-full"/> SORTED</span>
+                    <span className="flex items-center gap-1.5 bg-white border-[2px] border-black rounded-full px-2.5 py-1"><span className="w-3 h-3 bg-brutalCyan border border-black rounded-full"/> PIVOT/KEY</span>
+                  </>
+                )}
                 <span className="ml-auto hidden md:flex items-center gap-1.5 text-black/50">💡 {algo.analogy?.slice(0,55)}…</span>
               </div>
-              <ArrayBars array={array} activeIndices={isCompare ? active : []} sortedIndices={sorted} pivotIndex={pivotIdx} />
+              {isSearch && (
+                <div className="mb-3 brutal-card p-3 !bg-brutalCyan flex flex-col md:flex-row gap-3 md:items-end">
+                  <div className="flex-1">
+                    <div className="text-xs font-black">🎯 KYA DHOONDHNA HAI? (TARGET)</div>
+                    <div className="flex gap-2 mt-1">
+                      <input value={targetInput} onChange={e=> setTargetInput(e.target.value)} onKeyDown={e=> { if(e.key==="Enter") handleTargetSet(); }} placeholder="e.g. 7" type="number" className="w-28 brutal-input !py-2 text-sm font-mono font-black text-center" aria-label="Search target" />
+                      <button onClick={handleTargetSet} className="brutal-btn !py-2 bg-black text-white">Search karo</button>
+                      <span className={`brutal-badge self-center ${array.includes(target) ? "bg-brutalLime" : "bg-brutalPink"}`}>{array.includes(target) ? "MILEGA ✓" : "NAHI MILEGA ✕"}</span>
+                    </div>
+                    <div className="text-[11px] font-bold text-black/60 mt-1">
+                      {id==="binary-search" || id==="jump-search" ? "Note: array auto-sort ho jayega (searching ko sorted chahiye)." : "Unsorted bhi chalega — ek-ek karke scan hoga."} • Target={target}
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button onClick={()=> handleRandomTarget("present")} className="brutal-btn !py-1 !text-xs bg-brutalLime">Random present</button>
+                    <button onClick={()=> handleRandomTarget("missing")} className="brutal-btn !py-1 !text-xs bg-brutalPink">Random missing</button>
+                  </div>
+                </div>
+              )}
+              <ArrayBars array={array} activeIndices={isCompare ? active : []} sortedIndices={sorted} pivotIndex={pivotIdx} targetValue={isSearch ? target : null} />
             </>
           ) : (
             <>

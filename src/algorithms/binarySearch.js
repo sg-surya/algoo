@@ -1,7 +1,8 @@
-export function binarySearchSteps(input){
+export function binarySearchSteps(input, targetOverride){
   const a=[...input].sort((x,y)=>x-y);
   const steps=[];
-  const target = a[Math.floor(a.length/2)+1] ?? a[0];
+  const parsed = Number(targetOverride);
+  const target = (targetOverride!==undefined && targetOverride!==null && targetOverride!=="" && !isNaN(parsed)) ? parsed : (a[Math.floor(a.length/2)+1] ?? a[0]);
   let comps=0;
   const push=(o)=> steps.push({array:[...a], variables:{ l:o.variables?.l??"-", r:o.variables?.r??"-", m:o.variables?.m??"-", target, comps }, ...o});
   push({type:"start", indices:[], message:`Binary Search — sorted [${a.join(", ")}], dhundo ${target} 🔍`, codeLine:0, variables:{l:0,r:a.length-1,m:"-"}});

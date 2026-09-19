@@ -1,7 +1,8 @@
-export function linearSearchSteps(input){
+export function linearSearchSteps(input, targetOverride){
   const a=[...input];
   const steps=[];
-  const target = a[Math.floor(a.length/2)]; // pick middle as target so found
+  const parsed = Number(targetOverride);
+  const target = (targetOverride!==undefined && targetOverride!==null && targetOverride!=="" && !isNaN(parsed)) ? parsed : a[Math.floor(a.length/2)]; // default middle so found
   let comps=0;
   const push=(o)=> steps.push({array:[...a], variables:{ idx:o.variables?.idx??"-", target, comps }, ...o});
   push({type:"start", indices:[], message:`Linear Search — dhundo ${target} 🔍`, codeLine:0, variables:{idx:0}});

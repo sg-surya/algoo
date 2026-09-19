@@ -12,6 +12,7 @@ import { binarySearchSteps, binaryCode } from "../algorithms/binarySearch";
 import { bfsSteps, bfsCode } from "../algorithms/bfs";
 import { dfsSteps, dfsCode } from "../algorithms/dfs";
 import { dijkstraSteps, dijkstraCode } from "../algorithms/dijkstra";
+import { jumpSearchSteps, jumpCode } from "../algorithms/jumpSearch";
 
 function comingSoonSteps(name){
   return (arr)=> {
@@ -289,7 +290,7 @@ export const algorithms = [
     description: "Jumps by √n then linear inside block.",
     analogy: "Kitaab me 10-10 page jump.",
     realWorld: "Sorted but binary se simple.",
-    stepsFn: comingSoonSteps("Jump Search"), code: ["def jump_search(arr,x):","    step=int(sqrt(n))","    ..."],
+    stepsFn: jumpSearchSteps, code: jumpCode,
     complexity: { best: "O(1)", avg: "O(√n)", worst: "O(√n)" },
     whenToUse: "Sorted large", pros: ["Less jumps"], cons: ["Slower than binary"],
     quiz: [{ q: "Jump step?", options: ["√n","n/2"], ans: 0 }],
